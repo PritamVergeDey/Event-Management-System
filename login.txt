@@ -1,0 +1,116 @@
+Logging in==
+******************************Here is the HTML code for the login form******************************************
+
+
+
+<form id='login' action='login.php' method='post' accept-charset='UTF-8'>
+<fieldset >
+<legend>Login</legend>
+<input type='hidden' name='submitted' id='submitted' value='1'/>
+
+<label for='username' >UserName*:</label>
+<input type='text' name='username' id='username'  maxlength="50" />
+
+<label for='password' >Password*:</label>
+<input type='password' name='password' id='password' maxlength="50" />
+ 
+<input type='submit' name='Submit' value='Submit' />
+ 
+</fieldset>
+</form>
+
+
+*******************We verify the username and the password we received and then look up those in the database. Here is the code************************
+	
+
+function Login()
+{
+
+    if(empty($_POST['username']))
+
+    {
+        $this->HandleError("UserName is empty!");
+        return false;
+    }
+
+    if(empty($_POST['password']))
+    {
+        $this->HandleError("Password is empty!");
+        return false;
+    }
+     
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
+
+    if(!$this->CheckLoginInDB($username,$password))
+    {
+        return false;
+    }
+
+    session_start();
+     
+    $_SESSION[$this->GetLoginSessionVar()] = $username;
+    return true;
+
+	*In order to identify a user as authorized, we are going to check the database for his combination of username/password, and if a correct combination was entered, we set a session variable*
+
+Here is the code to look up the username and password-
+
+
+function CheckLoginInDB($username,$password)
+{
+    if(!$this->DBLogin())
+
+    {
+        $this->HandleError("Database login failed!");
+        return false;
+    }         
+
+    $username = $this->SanitizeForSQL($username);
+
+    $pwdmd5 = md5($password);
+
+    $qry = "Select name, email from $this->tablename ".
+        " where username='$username' and password='$pwdmd5' ".
+        " and confirmcode='y'";
+
+    $result = mysql_query($qry,$this->connection);
+     
+    if(!$result || mysql_num_rows($result) <= 0)
+
+    {
+        $this->HandleError("Error logging in. "."The username or password does not match");
+        return false;
+    }
+    return true;
+}
+
+
+*******Access Controlled Pages*******
+
+Include this sample piece of code on top of your protected pages:
+
+<?PHP
+require_once("./include/membersite_config.php");
+ 
+if(!$fgmembersite->CheckLogin())
+{
+    $fgmembersite->RedirectToURL("login.php");
+    exit;
+}
+?>
+
+Here is the CheckLogin() function code.
+
+function CheckLogin()
+{
+     session_start();
+     $sessionvar = $this->GetLoginSessionVar();
+
+     if(empty($_SESSION[$sessionvar]))
+     {
+        return false;
+     }
+     return true;
+
+}
